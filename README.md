@@ -4,7 +4,7 @@ A utility library by and for wrzeczak in use for my projects. Not actively maint
 
 ### messages.h
 
-Messages is a set of macros for sending error, debug, warning, and todo messages with nice formatting. Error, debug, and warning messages (`eprint`, `dprint`, `wprintf`, and their respective `printf` versions) print to the console in a similar format to Raylib's console logging:
+Messages is a set of macros for sending error, debug, warning, and todo messages with nice formatting. Error, debug, and warning messages (`eprint`, `dprint`, `wprint`, and their respective `printf` versions) print to the console in a similar format to [Raylib's](https://raylib.com) console logging:
 
 ```
 WRZ: DEBUG: This is a debug message. These are toggled at compile-time with the -DDEBUG flag to gcc.
@@ -32,4 +32,4 @@ that said function is not yet implemented, exiting the program. I use this in fi
 
 ### r_array.h
 
-R_ARRAY is a simple dynamic array library I wrote mostly for my C rewrite of my [viewer](https://github.com/wrzeczak/viewer) project. It can store integers and strings, doesn't need too much messing around with `malloc()` (hopefully I correctly wrote it in such a way that I don't need to malloc every string ever???), and has a generally pleasing API. If you are in serious need of a dynamic array library, I would not recommend using this; it is not throughly tested (other than in `ra_demo.c`) and was written purely to support a personal project. Do not trust me with your data. Documentation on the interface and data structures are provided in `r_array.h`, and I think the code is simple enough to speak for itself.
+R_ARRAY is a simple dynamic array library I wrote mostly for my C rewrite of my [viewer](https://github.com/wrzeczak/viewer) project. It can store integers and strings, doesn't need too much messing around with `malloc()` (hopefully I correctly wrote it in such a way that I don't need to malloc every string ever???), and has a generally pleasing API. If you are in serious need of a dynamic array library, I would not recommend using this; it is not thoroughly tested (other than in `ra_demo.c`) and was written purely to support a personal project. Do not trust me with your data. Documentation on the interface and data structures are provided in `r_array.h`, and I think the code is simple enough to speak for itself.
