@@ -10,15 +10,15 @@
 				exit(-2);
 				
 #ifdef DEBUG
-#define dprint(s) printf("WRZ: DEBUG: " s "\n");
-#define dprintf(s, ...) printf("WRZ: DEBUG: " s "\n", __VA_ARGS__);
+#define dprint(s) printf("WRZ: DEBUG: " s "\n")
+#define dprintf(s, ...) printf("WRZ: DEBUG: " s "\n", __VA_ARGS__)
 #else
 #define dprint(s)
 #define dprintf(s, ...)
 #endif
 
-#define eprint(s) printf("\nWRZ: ERROR: " s "\n\n");
-#define eprintf(s, ...) printf("\nWRZ: ERROR: " s "\n\n", __VA_ARGS__);
+#define eprint(s) printf("\nWRZ: ERROR: " s "\n\n")
+#define eprintf(s, ...) printf("\nWRZ: ERROR: " s "\n\n", __VA_ARGS__)
 
-#define wprint(s) printf("WRZ: WARN: " s "\n");
-#define wprintf(s, ...) printf("WRZ: WARN: " s "\n", __VA_ARGS__);
+#define wprint(s) printf("WRZ: WARN: " s "\n")
+#define wprintf(s, ...) printf("WRZ: WARN: " s "\n", __VA_ARGS__)

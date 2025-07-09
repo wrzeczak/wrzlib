@@ -6,13 +6,13 @@
 
 #pragma once
 
-#include "messages.h"
-
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+
+#include "messages.h"
 
 //-----------------------------------------------------------------------------
 
@@ -76,6 +76,10 @@ r_array * ra_create(int size, ra_type type) {
 }
 
 void ra_destroy(r_array * ra) {
+    if(ra->type == RA_STRING)
+        for(int i = 0; i < ra->count; i++)
+            free(ra->elements[i].s_value);
+
     free(ra);
 }
 
@@ -87,28 +91,15 @@ void ra_append(r_array * ra, ra_value element) {
         }
     }
 
-    switch(ra->type) {
-        case RA_INT:
-            // dprintf("Attemping append of value %d at index %d (array type: %s)", element.i_value, ra->count, ra_typename(ra));
-            break;
-        case RA_STRING:
-            // dprintf("Attemping append of value '%s' at index %d (array type: %s)", element.s_value, ra->count, ra_typename(ra));
-            break;  
-    }
-
     ra->elements = realloc(ra->elements, (ra->count + 1) * sizeof(ra_value));
     // dprint("Reallocated memory...");
-    ra->elements[ra->count] = element;
-    switch(ra->type) {
-        case RA_INT: 
-            // dprintf("Assigned value %d at index %d.", ra->elements[ra->count].i_value, ra->count);
-            break;
-        case RA_STRING: 
-            // dprintf("Assigned value '%s' at index %d.", ra->elements[ra->count].s_value, ra->count);
-            break;
-    }
+    if(ra->type == RA_STRING) {
+        ra->elements[ra->count] = (ra_value) (char *) malloc(ra->size);
+        strncpy(ra->elements[ra->count].s_value, element.s_value, ra->size);
+    } else
+        ra->elements[ra->count] = element;
+
     ra->count++;
-    // dprintf("New array length: %d", ra->count);
 }
 
 void ra_concat(r_array * ra, r_array * rb) {
