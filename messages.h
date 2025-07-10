@@ -6,6 +6,7 @@
 
 #pragma once
 
+// TODO: try to see if i can make this error at compile-time rather than run-time
 #define todo(l) printf("\nWRZ: TODO: function " l "() is not yet implemented!\n\n"); \
 				exit(-2);
 				

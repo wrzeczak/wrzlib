@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "messages.h"
 
@@ -34,6 +35,8 @@ typedef struct {
     ra_type type;
 } r_array;
 
+#define RA_ERROR_RETURN 11                                  // value returned on error by all ra_ functions
+
 //-----------------------------------------------------------------------------
 
 #define ra_typename(ra) (ra->type == RA_INT) ? "RA_INT" : "RA_STRING"
@@ -41,10 +44,15 @@ typedef struct {
 r_array * ra_create(int size, ra_type type);                // initialize r_array of size 0; size for RA_INT should be sizeof(int) and maximum string length for RA_STRING
 void ra_destroy(r_array * ra);                              // free pointer created by ra_create()
 
+r_array * ra_resize(r_array * ra, int size);                // (only for RA_STRING) change size of elements, errors if resize fails i.e. elements to large to be shrunk 
+r_array * ra_shrink(r_array * ra);                          // (only for RA_STRING) make elements of ra as small as possible, returns new array
+r_array * ra_expand(r_array * ra);                          // (only for RA_STRING) expands elements of ra to the nearest power of two for memory padding or whatever
+
 void ra_append(r_array * ra, ra_value element);             // append element to the end of ra
-void ra_concat(r_array * ra, r_array * rb);                 // appends b to the end of a, e.g. {1, 2, 3} + {4, 5, 6} = {1, 2, 3, 4, 5, 6}
+r_array * ra_concat(r_array * ra, r_array * rb);            // appends b to the end of a, e.g. {1, 2, 3} + {4, 5, 6} = {1, 2, 3, 4, 5, 6}, returns concatenated list
 void ra_insert(r_array * ra, int idx, ra_value element);    // inserts element at idx, shifting everything behind it, e.g. {1, 2, 3} ra_insert(1, 7) = {1, 7, 2, 3}
-void ra_inject(r_array * ra, int idx, r_array rb);          // inserts rb at idx in ra, shifting everything behind it as in ra_insert()
+void ra_inject(r_array * ra, int idx, r_array * rb);        // inserts rb at idx in ra, shifting everything behind it as in ra_insert()
+r_array * ra_slice(r_array * ra, int start, int end);       // returns the array from [start, end] inclusive e.g {0, 1, 2, 3, 4, 5} ra_slice(2, 4) = {2, 3, 4}
 
 int is_member(r_array * ra, ra_value element);              // returns -1 if element not in ra, otherwise returns index where element is in ra
 bool ra_cmp(r_array * a, r_array * b);                      // returns true if a and b contain identical values in the same order
@@ -53,16 +61,14 @@ bool ra_loosecmp(r_array * a, r_array * b);                 // returns true if a
 ra_value ra_rmidx(r_array * ra, int idx);                   // remove item from ra at idx, returns value removed or (ra_value) (char *) NULL if error (prints warning)
 ra_value ra_rmval(r_array * ra, ra_value element);          // remove first occurence of element in ra, returns same as ra_rmidx()
 ra_value ra_pop(r_array * ra);                              // remove and return last element of ra
-ra_value ra_cap(r_array * ra);                              // remove and return first element of ra
+ra_value ra_behead(r_array * ra);                           // remove and return first element of ra
 
 void ra_set(r_array * ra);                                  // remove all duplicates in ra, modifies ra (equivalent to set() in python)
 
-void ra_repr(r_array * ra, char * label);                   // single-line print ra with an optional label (pass ra, NULL to print no label)
+void ra_repr(r_array * ra);                                 // single-line print ra
 void ra_pprint(r_array * ra, char * label);                 // pretty print ra with an optional label (pass ra, NULL to print no label)
 
 //-----------------------------------------------------------------------------
-
-void ra_repr(r_array * ra, char * label);
 
 r_array * ra_create(int size, ra_type type) {
     r_array * ra = (r_array *) malloc(sizeof(r_array));
@@ -83,16 +89,77 @@ void ra_destroy(r_array * ra) {
     free(ra);
 }
 
+r_array * ra_resize(r_array * ra, int size) {
+    if(ra->type == RA_INT) {
+        wprintf("ra_resize(size = %d) called on array of type RA_INT; this is not supported behavior...", size);
+        return ra;
+    }
+
+    for(int i = 0; i < ra->count; i++) {
+        if(strlen(ra->elements[i].s_value) >= size) {
+            eprintf("ra_resize(size = %d) failed because element %d (strlen = %d) could not be shrunk without data loss.", size, i, strlen(ra->elements[i].s_value));
+            exit(RA_ERROR_RETURN);
+        }
+    }
+
+    r_array * ro = ra_create(size, ra->type);
+
+    char sc_buffer[size];
+    memset(sc_buffer, 0, size);
+
+    for(int i = 0; i < ra->count; i++) {
+        strncpy(sc_buffer, ra->elements[i].s_value, size);
+        ra_append(ro, (ra_value) (char *) sc_buffer);
+        memset(sc_buffer, 0, size);
+    }
+
+    return ro;
+}
+
+r_array * ra_shrink(r_array * ra) {
+    if(ra->type == RA_INT) {
+        wprint("ra_shrink() called on array of type RA_INT; this is not supported behavior...");
+        return ra;
+    }
+
+    int shrink_size = -1;
+
+    for(int i = 0; i < ra->count; i++)
+        if((int) strlen(ra->elements[i].s_value) > shrink_size)
+            shrink_size = (int) strlen(ra->elements[i].s_value);
+
+    return ra_resize(ra, shrink_size + 1);
+}
+
+r_array * ra_expand(r_array * ra) {
+    if(ra->type == RA_INT) {
+        wprint("ra_expand() called on array of type RA_INT; this is not supported behavior...");
+        return ra;
+    }
+
+    r_array * ro = ra_shrink(ra);
+
+    int expand_size = -1;
+    int e = 0;
+
+    while(expand_size < ro->size) {
+        e++;
+        expand_size = (int) pow(2, e);
+    }
+
+    return ra_resize(ra, expand_size);
+}
+
 void ra_append(r_array * ra, ra_value element) {
     if(ra->type == RA_STRING) {
         if(strlen(element.s_value) > ra->size) {
             eprintf("ra_append: String passed (length %d) exceeds maximum size of array elements (%d)\n%23cString passed: \"%s\"", strlen(element.s_value), ra->size, ' ', element.s_value);
-            exit(10);
+            exit(RA_ERROR_RETURN);
         }
     }
 
     ra->elements = realloc(ra->elements, (ra->count + 1) * sizeof(ra_value));
-    // dprint("Reallocated memory...");
+    
     if(ra->type == RA_STRING) {
         ra->elements[ra->count] = (ra_value) (char *) malloc(ra->size);
         strncpy(ra->elements[ra->count].s_value, element.s_value, ra->size);
@@ -102,16 +169,38 @@ void ra_append(r_array * ra, ra_value element) {
     ra->count++;
 }
 
-void ra_concat(r_array * ra, r_array * rb) {
-    todo("ra_concat");
+r_array * ra_concat(r_array * ra, r_array * rb) {
+    if(ra->size != rb->size) {
+        eprintf("ra_concat() attempted to append two arrays with unequal sizes (ra->size = %d, rb->size = %d)!", ra->size, rb->size);
+        exit(RA_ERROR_RETURN);
+    }
+
+    if(ra->type != rb->type) {
+        eprint("ra_concat() attempted to append two arrays with different types!");
+        exit(RA_ERROR_RETURN);
+    }
+
+    r_array * ro = ra_create(ra->size, ra->type);
+
+    for(int i = 0; i < ra->count; i++)
+        ra_append(ro, ra->elements[i]);
+
+    for(int i = 0; i < rb->count; i++)
+        ra_append(ro, rb->elements[i]);
+
+    return ro;
 }
 
 void ra_insert(r_array * ra, int idx, ra_value element) {
     todo("ra_insert");
 }
 
-void ra_inject(r_array * ra, int idx, r_array rb) {
+void ra_inject(r_array * ra, int idx, r_array * rb) {
     todo("ra_inject");
+}
+
+r_array * ra_slice(r_array * ra, int start, int end) {
+    todo("ra_slice");
 }
 
 int is_member(r_array * ra, ra_value element) {
@@ -227,24 +316,17 @@ ra_value ra_pop(r_array * ra) {
     return ra_rmidx(ra, ra->count - 1);
 }
 
-ra_value ra_cap(r_array * ra) {
+ra_value ra_behead(r_array * ra) {
     return ra_rmidx(ra, 0);
 }
 
-void ra_set(r_array * ra) {
-    todo("ra_set");
-}
-
-void ra_repr(r_array * ra, char * label) {
-    if(!(label == NULL))
-        printf("\"%s\" ", label);
-
+void ra_repr(r_array * ra) {
     if(ra->count == 0) {
-        printf("[0]> EMPTY\n");
+        printf("[0] (%d)> EMPTY\n", ra->size);
         return;
     }
 
-    printf("[%d]> ", ra->count);
+    printf("[%d] (%d)> ", ra->count, ra->size);
 
     switch(ra->type) {
         case RA_INT: {
