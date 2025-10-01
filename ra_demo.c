@@ -28,25 +28,26 @@ int main(void) {
     printf("Removing '%s' from s, and putting in '%s'!\n", ra_rmval(s, (ra_value) "Wrzeczak!"), "Rorshach");
     ra_append(s, (ra_value) "Rorshach!");
 
-    ra_repr(s, "name???");
+    ra_repr(s);
 
     ra_destroy(s);
-    ra_destroy(n);
 
     printf("Removing the last number from n (%d)!\n", ra_pop(n));
 
-    ra_repr(n, "numbers...");
+    ra_repr(n);
 
     ra_append(n, n->elements[0]);
     ra_append(n, n->elements[1]);
 
-    ra_repr(n, "too many numbers!");
+    // ra_repr(n);
 
-    printf("Making a set of n...\n");
+    // printf("Making a set of n...\n");
 
-    ra_set(n);
+    // ra_set(n);
 
-    ra_repr(n, "number.");
+    ra_repr(n);
 
-    return 0;
+    ra_destroy(n);
+
+    ra_exit();
 }

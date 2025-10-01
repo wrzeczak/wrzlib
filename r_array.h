@@ -37,12 +37,15 @@ typedef struct {
 
 #define RA_ERROR_RETURN 11                                  // value returned on error by all ra_ functions
 
+int __arrays_defined = 0;
+
 //-----------------------------------------------------------------------------
 
 #define ra_typename(ra) (ra->type == RA_INT) ? "RA_INT" : "RA_STRING"
 
 r_array * ra_create(int size, ra_type type);                // initialize r_array of size 0; size for RA_INT should be sizeof(int) and maximum string length for RA_STRING
 void ra_destroy(r_array * ra);                              // free pointer created by ra_create()
+void ra_exit();                                             // checks __arrays_defined and crashes if non-zero; should be used at end of main() in lieu of return 0;
 
 r_array * ra_resize(r_array * ra, int size);                // (only for RA_STRING) change size of elements, errors if resize fails i.e. elements to large to be shrunk 
 r_array * ra_shrink(r_array * ra);                          // (only for RA_STRING) make elements of ra as small as possible, returns new array
@@ -63,7 +66,7 @@ ra_value ra_rmval(r_array * ra, ra_value element);          // remove first occu
 ra_value ra_pop(r_array * ra);                              // remove and return last element of ra
 ra_value ra_behead(r_array * ra);                           // remove and return first element of ra
 
-void ra_set(r_array * ra);                                  // remove all duplicates in ra, modifies ra (equivalent to set() in python)
+void ra_set(r_array * ra);                                  // remove all duplicates in ra, modifies ra (equivalent to list(set()) in python)
 
 void ra_repr(r_array * ra);                                 // single-line print ra
 void ra_pprint(r_array * ra, char * label);                 // pretty print ra with an optional label (pass ra, NULL to print no label)
@@ -78,6 +81,8 @@ r_array * ra_create(int size, ra_type type) {
     ra->count = 0;
     ra->elements = malloc(0);
 
+    __arrays_defined++;
+
     return ra;
 }
 
@@ -87,6 +92,17 @@ void ra_destroy(r_array * ra) {
             free(ra->elements[i].s_value);
 
     free(ra);
+
+    __arrays_defined--;
+}
+
+void ra_exit() {
+    if(__arrays_defined != 0) {
+        eprintf("RA_SAFETY check failed! Current number of defined arrays: %d", __arrays_defined);
+        exit(RA_ERROR_RETURN);
+    }
+
+    exit(0);
 }
 
 r_array * ra_resize(r_array * ra, int size) {
@@ -318,6 +334,10 @@ ra_value ra_pop(r_array * ra) {
 
 ra_value ra_behead(r_array * ra) {
     return ra_rmidx(ra, 0);
+}
+
+void ra_set(r_array * ra) {
+    todo("ra_set");
 }
 
 void ra_repr(r_array * ra) {
