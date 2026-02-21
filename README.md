@@ -33,3 +33,16 @@ that said function is not yet implemented, exiting the program. I use this in fi
 ### r_array.h
 
 R_ARRAY is a simple dynamic array library I wrote mostly for my C rewrite of my [viewer](https://github.com/wrzeczak/viewer) project. It can store integers and strings, doesn't need too much messing around with `malloc()` (hopefully I correctly wrote it in such a way that I don't need to malloc every string ever???), and has a generally pleasing API. If you are in serious need of a dynamic array library, I would not recommend using this; it is not thoroughly tested (other than in `ra_demo.c`) and was written purely to support a personal project. Do not trust me with your data. Documentation on the interface and data structures are provided in `r_array.h`, and I think the code is simple enough to speak for itself.
+
+### wectangle3.h
+
+This is the third iteration of my `Wectangle` library. Raylib `Rectangles` aren't *really* rotateable, and when you do rotate them, they rotate around their top-left corner, not their center. In order to implement 2-d physics are just conveniently rotate rectangles, I created a rectangle which rotates around its center trivially. It's a more-or-less drop in replacement for `Rectangle` (their position `x` and `y` are still relative to the top-left corner, even though they properly rotate around the center). It's not 100% bug-free, but it's pretty much good enough.
+
+Features:
+| Feature      | Function |
+|--------------|----------|
+| Drawing in solid, line, and texture modes. | `DrawWectangle*()`|
+| Trivial compatibility with `Rectangle` | `WectangleFromRec` |
+| Collision detection between Wec, `Vector2`, and `Rectangle` | `CheckCollision*()`, `GetCollision*()` |
+
+Also, no `malloc()`, like Raylib.
