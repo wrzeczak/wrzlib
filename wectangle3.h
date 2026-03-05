@@ -13,16 +13,14 @@
 #include <raylib.h>
 #include <raymath.h>
 
-// https://github.com/wrzeczak/wrzlib
-#include "messages.h"
-
 //------------------------------------------------------------------------------
 
-/*
-Wectangles rotate about their center. However, to maintain the similarity to
-Rectangle, { x, y } define the top-left point *before* rotation.
-*/
-
+/**
+ * A Raylib-compatible rotateable Rectangle. W for wrzeczak.
+ * 
+ * @param x, y, width, height Equivalent to the Raylib `Rectangle`'s fields. Position is the top-left corner of a Rectangle/Wectangle with `rot` of `0.0f`.
+ * @param rot Rotation, **in degrees**, about the center of the Wectangle.
+ */
 typedef struct {
     float x;
     float y;
@@ -48,6 +46,12 @@ Vector2 WectangleAxis(Wectangle wec);
 Vector2 WectangleDim(Wectangle wec);
 float WectangleChord(Wectangle wec);
 
+/**
+ * The triangles of a Wectangle.
+ * 
+ * @param a1, a2, a3 One of two triangles. Contains duplicate data to triangle b. Should be in counter-clockwise (renderable) order.
+ * @param b1, b2, b3 The other of the two triangles.
+ */
 typedef struct {
     Vector2 a1, a2, a3;
     Vector2 b1, b2, b3;
@@ -55,6 +59,11 @@ typedef struct {
 
 WectTris WectangleTris(Wectangle wec);
 
+/**
+ * The corners of a Wectangle. No guarantees about the ordering of them. Use `WectangleTris()` to get a counter-clockwise (renderable) set of points.
+ * 
+ * @param a, b, c, d `Vector2` uniquely representing a corner.
+ */
 typedef struct {
     Vector2 a, b, c, d;
 } WecCorners;
@@ -65,12 +74,18 @@ bool CheckCollisionPointWec(Vector2 a, Wectangle b);
 bool CheckCollisionWecs(Wectangle a, Wectangle b);
 bool CheckCollisionWecRec(Wectangle a, Rectangle b);
 
+/**
+ * A dynamic list of collision points between two Wectangles (or a Wectangle and a Rectangle). `GetCollisionWec()` performs `malloc()` on `tris`, be sure to `free()`!
+ * 
+ * @param points A **potentially NULL** list of `Vector2` that represents in (hopefully; this is still W.I.P) counter-clockwise order the up to eight points where two rectangles can collide. If `num_points` is zero, this will be `NULL`.
+ * @param num_points The number of points in `points`. If this is zero, points is `NULL`.
+ */
 typedef struct {
-    Vector2 * tris;
-    unsigned int tri_count;
+    Vector2 * points;
+    unsigned int num_points;
 } WecCollision;
 
-WecCollision GetCollisionWec(Wectangle a, Wectangle b);
+WecCollision GetCollisionWecs(Wectangle a, Wectangle b);
 WecCollision GetCollisionWecRec(Wectangle a, Rectangle b);
 
 float WecCollisionArea(WecCollision coll);
@@ -80,6 +95,15 @@ Wectangle TranslateWectangle(Wectangle wec, Vector2 trans);
 //------------------------------------------------------------------------------
 // BASIC SHAPE DRAWING - RAYLIB API IMITATION
 
+/**
+ * Draw a Wectangle to the screen.
+ * 
+ * @param posX x-position of the top-left corner if rot were 0.
+ * @param posY y-position of the top-left corner if rot were 0.
+ * @param width the length parallel to the bottom of the screen if rot were 0.
+ * @param height the length perpendicular to the bottom of the screen if rot were 0.
+ * @param rot the rotation, **in degrees**, if the Wectangle about its center.
+ */
 void DrawWectangle(float posX, float posY, float width, float height, float rot, Color color) {
     WectTris tris = WectangleTris((Wectangle) { .x = posX, .y = posY, .width = width, .height = height, .rot = rot });
 
@@ -95,34 +119,37 @@ void DrawWectangle(float posX, float posY, float width, float height, float rot,
     
 }
 
+/**
+ * Draw a Wectangle to the screen. See `DrawWectangle()`
+ */
 void DrawWectangleV(Vector2 position, Vector2 size, float rot, Color color) {
     DrawWectangle(position.x, position.y, size.x, size.y, rot, color);
 }
 
+/**
+ * Draw a Wectangle to the screen. See `DrawWectangle()`
+ */
 void DrawWectangleRec(Rectangle rec, float rot, Color color) {
     DrawWectangle(rec.x, rec.y, rec.width, rec.height, rot, color);
 }
 
+/**
+ * Draw a Wectangle to the screen. See `DrawWectangle()`
+ */
 void DrawWectangleWec(Wectangle wec, Color color) {
     DrawWectangle(wec.x, wec.y, wec.width, wec.height, wec.rot, color);
 }
 
+/**
+ * Draw a Wectangle to the screen. See `DrawWectangle()`. Instead of drawing a solid color, this draws an outline.
+ */
 void DrawWectangleLines(Wectangle wec, Color color) {
-    WectTris tris = WectangleTris(wec);
-
-    if(((int) roundf(wec.rot) % 90) != 0) {
-        DrawLineV(tris.a3, tris.a2, color);
-        DrawLineV(tris.a2, tris.a1, color);
-        DrawLineV(tris.b2, tris.b1, color);
-        DrawLineV(tris.b1, tris.b3, color);
-    } else if(((int) roundf(wec.rot) % 180) == 0) {
-        DrawRectangleLines(wec.x, wec.y, wec.width, wec.height, color);
-    } else {
-        Vector2 pos = (tris.a3.y < tris.b1.y) ? tris.a3 : tris.b1;
-        DrawRectangleLines(pos.x, pos.y, wec.height, wec.width, color);
-    } 
+    DrawWectangleLinesEx(wec, 1.0f, color);
 }
 
+/**
+ * Draw a Wectangle's outline to the screen, with extra parameters.
+ */
 void DrawWectangleLinesEx(Wectangle wec, float lineThick, Color color) {
     WectTris tris = WectangleTris(wec);
 
@@ -144,6 +171,9 @@ void DrawWectangleLinesEx(Wectangle wec, float lineThick, Color color) {
 //----------------------------
 // TEXTURE DRAWING
 
+/**
+ * Draw a texture within a Wectangle. This will scale the texture of the bounds of the Wectangle, and rotate it accordingly.
+ */
 void DrawWectangleTex(Wectangle wec, Texture2D tex, Color tint) {
     int posX = wec.x;
     int posY = wec.y;
@@ -219,30 +249,79 @@ void DrawWectangleTex(Wectangle wec, Texture2D tex, Color tint) {
 
 //----------------------------
 // GETTERS
-Wectangle WectangleZero() {
+
+/**
+ * Returns an empty Wectangle.
+ * 
+ * @return `(Wectangle) { 0, 0, 0, 0, 0.0f };`
+ */
+inline Wectangle WectangleZero() {
     return (Wectangle) { 0, 0, 0, 0, 0.0f };
 }
 
-Wectangle WectangleFromRec(Rectangle rec) {
+/**
+ * Get a Wectangle from a Rectangle (rot is set to 0.0f)
+ * 
+ * @param rec The Rectangle to copy.
+ * @return `(Wectangle) { rec.x, rec.y, rec.width, rec.height, 0.0f };`
+ */
+inline Wectangle WectangleFromRec(Rectangle rec) {
     return (Wectangle) { rec.x, rec.y, rec.width, rec.height, 0.0f };
 }
 
-Vector2 WectanglePos(Wectangle wec) {
+/**
+ * Get the position of a Wectangle.
+ * 
+ * @param wec The Wectangle in question.
+ * @return `(Vector2) { wec.x, wec.y };`
+ */
+inline Vector2 WectanglePos(Wectangle wec) {
     return (Vector2) { wec.x, wec.y };
 }
 
-Vector2 WectangleAxis(Wectangle wec) {
+/**
+ * Get the center of a Wectangle i.e. the axis about which it rotates.
+ * 
+ * @param wec The Wectangle in question.
+ * @return `return (Vector2) { wec.x + (0.5f * wec.width), wec.y + (0.5f * wec.height) };`
+ */
+inline Vector2 WectangleAxis(Wectangle wec) {
     return (Vector2) { wec.x + (0.5f * wec.width), wec.y + (0.5f * wec.height) };
 }
 
+/**
+ * Get the width and height of a Wectangle.
+ * 
+ * @param wec The Wectangle in question.
+ * @return `(Vector2) { wec.width, wec.height };`
+ */
 Vector2 WectangleDim(Wectangle wec) {
     return (Vector2) { wec.width, wec.height };
 }
 
+/**
+ * Get the longest distance between two of the Wectangle's corners.
+```
+*----*
+|\   | The chord is
+| \  | the line drawn
+|  \ | with slashes
+|   \| in this diagram.
+*----*
+```
+ * @param wec The Wectangle in question.
+ * @return The length of the chord.
+ */
 float WectangleChord(Wectangle wec) {
     return Vector2Distance(WectangleAxis(wec), Vector2Add(WectangleAxis(wec), Vector2Scale(WectangleDim(wec), 0.5f)));
 }
 
+/**
+ * Get the two triangles that make up a Wectangle. These two triangles (see `WectTris`) should be ordered counter-clockwise (renderable).
+ * 
+ * @param wec The Wectangle in question.
+ * @return See `WectTris`.
+ */
 WectTris WectangleTris(Wectangle wec) {
     int posX = wec.x;
     int posY = wec.y;
@@ -284,6 +363,12 @@ WectTris WectangleTris(Wectangle wec) {
     return (WectTris) { rc, tc, lc, bc, rc, lc };
 }
 
+/**
+ * Get the corners of a Wectangle in no particular order.
+ * 
+ * @param wec The Wectangle in question.
+ * @return See `WecCorners`.
+ */
 WecCorners WectangleCorners(Wectangle wec) {
     int posX = wec.x;
     int posY = wec.y;
@@ -308,17 +393,66 @@ WecCorners WectangleCorners(Wectangle wec) {
     return (WecCorners) { a0, a1, a2, a3 };
 }
 
-bool CheckCollisionPointWec(Vector2 a, Wectangle b) {
-    WecCorners corners = WectangleCorners(b);
-    Vector2 axis = WectangleAxis(b);
+/**
+ * Check if there is a collision between a Wectangle and a Point (i.e. if that point is within the Wectangle). This works by checking if the line between the point and the center of the Wectangle  intersects any of the faces of the Wectangle. If it does, the point must be outside the Wectangle.
+ * 
+ * @param wec The Wectangle in question.
+ * @param point The Point in question.
+ * @return Whether or not `point` is inside `wec`.
+ */
+bool CheckCollisionPointWec(Vector2 point, Wectangle wec) {
+    WecCorners corners = WectangleCorners(wec);
+    Vector2 axis = WectangleAxis(wec);
     
-    if(CheckCollisionLines(corners.a, corners.b, a, axis, NULL)) return false;
-    if(CheckCollisionLines(corners.b, corners.c, a, axis, NULL)) return false;
-    if(CheckCollisionLines(corners.c, corners.d, a, axis, NULL)) return false;
-    if(CheckCollisionLines(corners.d, corners.a, a, axis, NULL)) return false;
+    if(CheckCollisionLines(corners.a, corners.b, point, axis, NULL)) return false;
+    if(CheckCollisionLines(corners.b, corners.c, point, axis, NULL)) return false;
+    if(CheckCollisionLines(corners.c, corners.d, point, axis, NULL)) return false;
+    if(CheckCollisionLines(corners.d, corners.a, point, axis, NULL)) return false;
     return true;
 }
 
+/**
+ * Get where a Circle and a Wectangle collide. This will return the first scanned point that is within the Wectangle.
+ * 
+ * @param c The center of the Circle in question.
+ * @param radius The radius of the Circle in question.
+ * @param wec The Wectangle in question.
+ * @param output If not `NULL`, the first point found on the Circle within the Wectangle. If no collision, this is `NULL`.
+ * @return Check `output` for return value.
+ */
+void GetCollisionCircleWec(Vector2 c, float radius, Wectangle wec, Vector2 * output) {
+    for(unsigned int i = 0; i < 20; i++) {
+        float theta = (i / 20.0f) * 2 * PI;
+        Vector2 check = Vector2Add(Vector2Scale((Vector2) { cosf(theta), sinf(theta) }, radius), c);
+        if(CheckCollisionPointWec(check, wec)) {
+            *output = check;
+            return;
+        } 
+    }
+
+    output = NULL; // use an output value here because simply returning Vector2Zero() would be ambiguous.
+}
+
+/**
+ * Check whether a Circle and a Wectangle collide.
+ * 
+ * @param c The center of the Circle in question.
+ * @param radius The radius of the Circle in question.
+ * @param wec The Wectangle in question.
+ * @return A boolean; whether or not `GetCollisionCircleWec(c, radius, wec, check)` sets `check` to `NULL`.
+ */
+bool CheckCollisionCircleWec(Vector2 c, float radius, Wectangle wec) {
+    Vector2 * check = NULL;
+    GetCollisionCircleWec(c, radius, wec, check);
+   return (check != NULL);
+}
+
+/**
+ * Check whether two Wectangles are colliding.
+ * 
+ * @param a, b The Wectangles in question.
+ * @return Whether or not they collide.
+ */
 bool CheckCollisionWecs(Wectangle a, Wectangle b) {
     a = (Wectangle) { a.x, a.y, a.width, a.height, (fmodf(a.rot, 90.0f) == 0.0f) ? a.rot + 0.02f : a.rot };
     b = (Wectangle) { b.x, b.y, b.width, b.height, (fmodf(b.rot, 90.0f) == 0.0f) ? b.rot + 0.02f : b.rot };
@@ -359,10 +493,24 @@ bool CheckCollisionWecs(Wectangle a, Wectangle b) {
     return false;
 }
 
-bool CheckCollisionWecRec(Wectangle a, Rectangle b) {
+/**
+ * Check whether or not a Wectangle and a Rectangle are colliding.
+ * 
+ * @param a The Wectangle in question.
+ * @param b The Rectangle in question.
+ * @return `CheckCollisionWecs(a, WectangleFromRec(b));`
+ */
+inline bool CheckCollisionWecRec(Wectangle a, Rectangle b) {
     return CheckCollisionWecs(a, WectangleFromRec(b));
 }
 
+/**
+ * qsort-compatible function for comparing the counterclockwiseness of two points relative to a given center point.
+ * 
+ * @param vector2_a, vector2_b The points in question. Passed as `(void *) ((const Vector2 *) v)` by `qsort()`.
+ * @param centroid The center-point in question. Passed as `(void *) ((const Vector2 *) v)` by `qsort()`.
+ * @return qsort-format, checking counterclockwiseness.
+ */
 int qs_counterclockwise(void * centroid, const void * vector2_a, const void * vector2_b) {
     Vector2 a = *((const Vector2 *) vector2_a);
     Vector2 b = *((const Vector2 *) vector2_b);
@@ -373,8 +521,8 @@ int qs_counterclockwise(void * centroid, const void * vector2_a, const void * ve
     float bx = b.x - c.x;
     float by = b.y - c.y;
     
-    float angle_a = atan2f(ay, ax);
-    float angle_b = atan2f(by, bx);
+    float angle_a = PI + atan2f(ay, ax);
+    float angle_b = PI + atan2f(by, bx);
 
     if(angle_a < angle_b) return -1;
     if(angle_a > angle_b) return 1;
@@ -387,6 +535,12 @@ int qs_counterclockwise(void * centroid, const void * vector2_a, const void * ve
     return 0;
 }
 
+/**
+ * Get the collision points of two Wectangles.
+ * 
+ * @param a, b The Wectangles in question.
+ * @return See `WecCollision`.
+ */
 WecCollision GetCollisionWecs(Wectangle a, Wectangle b) {
     a = (Wectangle) { a.x, a.y, a.width, a.height, (fmodf(a.rot, 90.0f) == 0.0f) ? a.rot + 0.02f : a.rot };
     b = (Wectangle) { b.x, b.y, b.width, b.height, (fmodf(b.rot, 90.0f) == 0.0f) ? b.rot + 0.02f : b.rot };
@@ -449,36 +603,51 @@ WecCollision GetCollisionWecs(Wectangle a, Wectangle b) {
     qsort_s(corners, corners_idx, sizeof(Vector2), &qs_counterclockwise, &centroid);
 
     static WecCollision output = { corners, 0 };
-    output.tri_count = corners_idx;
+    output.num_points = corners_idx;
 
     return output;
 }
 
-WecCollision GetCollisionWecRec(Wectangle a, Rectangle b) {
+/**
+ * Get the collision points between a Wectangle and a Rectangle.
+ * 
+ * @param a The Wectangle in question.
+ * @param b The Rectangle in question.
+ * @return `GetCollisionWecs(a, WectangleFromRec(b));`
+ */
+inline WecCollision GetCollisionWecRec(Wectangle a, Rectangle b) {
     return GetCollisionWecs(a, WectangleFromRec(b));
 }
 
+//! **DOES NOT WORK**
 float WecCollisionArea(WecCollision coll) {
-    if(coll.tri_count < 3) return 0.0f;
+    if(coll.num_points < 3) return 0.0f;
 
-    float xs[coll.tri_count + 1];
-    for(unsigned int i = 0; i < coll.tri_count; i++) xs[i] = coll.tris[i].x;
-    xs[coll.tri_count] = coll.tris[0].x;
+    float xs[coll.num_points + 1];
+    for(unsigned int i = 0; i < coll.num_points; i++) xs[i] = coll.points[i].x;
+    xs[coll.num_points] = coll.points[0].x;
 
-    float ys[coll.tri_count + 1];
-    for(unsigned int i = 0; i < coll.tri_count; i++) ys[i] = coll.tris[i].y;
-    ys[coll.tri_count] = coll.tris[0].y;
+    float ys[coll.num_points + 1];
+    for(unsigned int i = 0; i < coll.num_points; i++) ys[i] = coll.points[i].y;
+    ys[coll.num_points] = coll.points[0].y;
 
     float output = 0.0f;
-    for(unsigned int i = 0; i < coll.tri_count; i++) output += (xs[i] * ys[i + 1]);
-    for(unsigned int i = 0; i < coll.tri_count; i++) output -= (xs[i + 1] * ys[i]);
+    for(unsigned int i = 0; i < coll.num_points; i++) output += (xs[i] * ys[i + 1]);
+    for(unsigned int i = 0; i < coll.num_points; i++) output -= (xs[i + 1] * ys[i]);
     return output * 0.5f;
 }
 
 //----------------------------
 // SETTERS
 
-Wectangle TranslateWectangle(Wectangle wec, Vector2 trans) {
+/**
+ * Translate a Wectangle.
+ * 
+ * @param wec The Wectangle in question.
+ * @param trans The amount to translate it.
+ * @return Wectangle whose position equals `wec.position + trans`.
+ */
+inline Wectangle TranslateWectangle(Wectangle wec, Vector2 trans) {
     return (Wectangle) { .x = wec.x + trans.x, .y = wec.y + trans.y, .width = wec.width, .height = wec.height, .rot = wec.rot };
 }
 
