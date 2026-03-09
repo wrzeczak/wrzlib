@@ -30,9 +30,9 @@ Exited with error code -2.
 
 that said function is not yet implemented, exiting the program. I use this in files when I intend or need a feature but haven't gotten around to implementing it.
 
-### r_array.h
+### r_array3.h
 
-R_ARRAY is a simple dynamic array library I wrote mostly for my C rewrite of my [viewer](https://github.com/wrzeczak/viewer) project. It can store integers and strings, doesn't need too much messing around with `malloc()` (hopefully I correctly wrote it in such a way that I don't need to malloc every string ever???), and has a generally pleasing API. If you are in serious need of a dynamic array library, I would not recommend using this; it is not thoroughly tested (other than in `ra_demo.c`) and was written purely to support a personal project. Do not trust me with your data. Documentation on the interface and data structures are provided in `r_array.h`, and I think the code is simple enough to speak for itself.
+R_ARRAY is a simple dynamic array library I wrote mostly for my C rewrite of my [viewer](https://github.com/wrzeczak/viewer) project. I've rewritten it a couple times as I've gotten better. The main reason I like this and not something macro-based (like Tsoding's `da_append()`) is mostly because I don't like function macros (behaving as functions, and not just code-generation) and because I want a more expansive API than Tsoding uses. This now comes with a generator script `ra_generator.c` that generates a library to store whatever types you need. This is designed very similarly to my [anecs](https://github.com/wrzeczak/anecs) project's generator.
 
 ### wectangle3.h
 
